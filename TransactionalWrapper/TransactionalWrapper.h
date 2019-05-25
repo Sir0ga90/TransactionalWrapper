@@ -42,6 +42,10 @@ public:
     using TKey = uint32_t;
     using TValType = std::string;
 
+    enum class EState {
+        IN_USE,
+        NOT_IN_USE
+    };
 
     void add(TKey key, TValType value);
     TValType get(TKey key);
@@ -49,11 +53,12 @@ public:
 
     void print() const;
 
-private:
-    void beginTransaction();
+    CTransaction beginTransaction();
     void commit(CTransaction transaction);
     void rollback(CTransaction transaction);
 
+private:
     std::unordered_map<TKey, TValType> container;
     std::vector<CTransaction> traJournal;
+    EState currentState;
 };

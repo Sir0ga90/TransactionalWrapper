@@ -4,13 +4,10 @@
 
 //CTransactionalWrapper=============================================================
 void CTransactionalWrapper::add(TKey key, TValType value) {
-    beginTransaction();
 
     try {
         auto tempContainer(container);
         tempContainer.insert(std::pair<TKey, TValType>(key, value));
-        container = tempContainer;
-        commit(*traJournal.rbegin());
     }
     catch (std::exception& e) {
         std::cerr << "EXCEPTION: " << e.what();
@@ -26,12 +23,10 @@ CTransactionalWrapper::TValType CTransactionalWrapper::get(TKey key) {
 
 
 void CTransactionalWrapper::remove(TKey key) {
-    beginTransaction();
 
     try {
         auto tempContainer(container);
         tempContainer.erase(key);
-        container = tempContainer;
         commit(*traJournal.rbegin());
     }
     catch (std::exception& e) {
@@ -42,26 +37,31 @@ void CTransactionalWrapper::remove(TKey key) {
 
 void CTransactionalWrapper::print() const {
     for (const auto& keyVal : container) {
-        std::cout << keyVal.first << keyVal.second << "\n";
+        std::cout << keyVal.first << " " << keyVal.second << "\n";
     }
 
     std::cout << "\n";
 }
 
 
-void CTransactionalWrapper::beginTransaction() {
+CTransaction CTransactionalWrapper::beginTransaction() {
     CTransaction newTransaction;
     traJournal.push_back(newTransaction);
+    currentState = EState::IN_USE;
+
+    return newTransaction;
 }
 
 
 void CTransactionalWrapper::commit(CTransaction transaction) {
     traJournal.rbegin()->setState(CTransaction::EState::COMMITTED);
+    currentState = EState::NOT_IN_USE;
 }
 
 
 void CTransactionalWrapper::rollback(CTransaction transaction) {
     traJournal.rbegin()->setState(CTransaction::EState::ROLLED_BACK);
+    currentState = EState::NOT_IN_USE;
 }
 
 
@@ -87,7 +87,7 @@ uint32_t CTransaction::getId() {
 }
 
 std::ostream& operator<<(std::ostream& os, CTransaction transaction) {
-    os << transaction.getId() <<
+    os << transaction.getId() << " " <<
         static_cast<uint32_t>(transaction.getState()) << "\n";
 
     return os;
