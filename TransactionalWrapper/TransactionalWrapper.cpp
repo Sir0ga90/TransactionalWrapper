@@ -2,16 +2,26 @@
 #include <iostream>
 
 
+CTransactionalWrapper::CTransactionalWrapper() :
+    currentState(EState::NOT_IN_USE) {}
+
 //CTransactionalWrapper=============================================================
 void CTransactionalWrapper::add(TKey key, TValType value) {
 
-    try {
-        auto tempContainer(container);
-        tempContainer.insert(std::pair<TKey, TValType>(key, value));
-    }
-    catch (std::exception& e) {
-        std::cerr << "EXCEPTION: " << e.what();
-        rollback(*traJournal.rbegin());
+    if (currentState == EState::IN_USE) {
+        try {
+            auto tempContainer(container);
+            auto newElement = std::pair<TKey, TValType>(key, value);
+
+            tempContainer.insert(newElement);
+
+            //TODO: not the best place for processing main container according to transactions
+            container.insert(newElement);
+        }
+        catch (std::exception& e) {
+            std::cerr << "EXCEPTION: " << e.what();
+            rollback(*traJournal.rbegin());
+        }
     }
 
 }
@@ -27,7 +37,9 @@ void CTransactionalWrapper::remove(TKey key) {
     try {
         auto tempContainer(container);
         tempContainer.erase(key);
-        commit(*traJournal.rbegin());
+
+        //TODO: not the best place for processing main container according to transactions
+        container.erase(key);
     }
     catch (std::exception& e) {
         std::cerr << "EXCEPTION: " << e.what();
@@ -46,8 +58,11 @@ void CTransactionalWrapper::print() const {
 
 CTransaction CTransactionalWrapper::beginTransaction() {
     CTransaction newTransaction;
-    traJournal.push_back(newTransaction);
-    currentState = EState::IN_USE;
+
+    if (currentState == EState::NOT_IN_USE) {
+        traJournal.push_back(newTransaction);
+        currentState = EState::IN_USE;
+    }
 
     return newTransaction;
 }

@@ -36,15 +36,15 @@ private:
 
 class CTransactionalWrapper {
 public:
-    CTransactionalWrapper() = default;
+    CTransactionalWrapper();
     ~CTransactionalWrapper() = default;
 
     using TKey = uint32_t;
     using TValType = std::string;
 
     enum class EState {
-        IN_USE,
-        NOT_IN_USE
+        NOT_IN_USE,
+        IN_USE
     };
 
     void add(TKey key, TValType value);
